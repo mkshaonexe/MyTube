@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.mkshaon.mytube',
+  appId: 'my.tube.com',
   appName: 'MyTube',
   webDir: 'dist',
   android: {

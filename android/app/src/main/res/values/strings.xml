@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MyTube</string>
+    <string name="title_activity_main">MyTube</string>
+    <string name="package_name">com.mkshaon.mytube</string>
+    <string name="custom_url_scheme">com.mkshaon.mytube</string>
+</resources>

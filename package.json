@@ -10,9 +10,18 @@
     "electron:dev": "wait-on http://localhost:5173 && electron electron/main.js",
     "build": "vite build",
     "electron:build": "electron-builder",
-    "start": "electron ."
+    "start": "electron .",
+    "android:init": "npx cap add android",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:run": "npx cap run android",
+    "android:build": "npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/browser": "^7.0.2",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

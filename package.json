@@ -1,7 +1,9 @@
 {
-  "name": "noutube-web",
+  "name": "mytube",
   "private": true,
   "version": "1.0.0",
+  "description": "Ad-Free YouTube Desktop App",
+  "author": "MK Shaon",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"npm run electron:dev\"",
@@ -31,7 +33,8 @@
     "wait-on": "^9.0.3"
   },
   "build": {
-    "appId": "com.noutube.app",
+    "appId": "com.mkshaon.mytube",
+    "productName": "MyTube",
     "files": [
       "dist/**/*",
       "electron/**/*"

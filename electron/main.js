@@ -14,7 +14,7 @@ function createWindow() {
       contextIsolation: true,
       webviewTag: true,
     },
-    title: 'NouTube - Ad-Free YouTube',
+    title: 'MyTube - Ad-Free YouTube',
     backgroundColor: '#0f0f0f',
   })
 
@@ -59,7 +59,7 @@ app.whenReady().then(() => {
           webContents.executeJavaScript(contentScript).catch(err => {
             console.error('Failed to inject content script:', err)
           })
-          console.log('🦦 NouTube: Ad-blocking script injected into YouTube')
+          console.log('🎬 MyTube: Ad-blocking script injected into YouTube')
         }
       })
     })

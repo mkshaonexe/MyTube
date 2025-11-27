@@ -1,9 +1,10 @@
-// NouTube Content Script - Full Feature Ad Blocking for YouTube
-// Ported from original NouTube: intercept.ts, css.ts, player.ts, sponsorblock.ts, dialogs.ts, menu.ts
+// MyTube Content Script - Full Feature Ad Blocking for YouTube
+// Created by MK Shaon
+// Features: Ad blocking, SponsorBlock, progress saving, shorts filter
 (function() {
   'use strict';
 
-  console.log('🦦 NouTube Loading...');
+  console.log('🎬 MyTube Loading...');
 
   // ==================== CONSTANTS ====================
   const AD_KEYS = ['adBreakHeartbeatParams', 'adPlacements', 'adSlots', 'playerAds'];
@@ -63,7 +64,7 @@
     
     toggleSponsorBlock() {
       this.sponsorBlock = !this.sponsorBlock;
-      console.log('🦦 SponsorBlock:', this.sponsorBlock ? 'ON' : 'OFF');
+      console.log('🎬 SponsorBlock:', this.sponsorBlock ? 'ON' : 'OFF');
     },
 
     // Player controls
@@ -216,7 +217,7 @@
       const res = await fetch(`https://sponsor.ajay.app/api/skipSegments?videoID=${videoId}`);
       if (res.status === 200) {
         const segments = await res.json();
-        console.log('🦦 SponsorBlock segments:', segments.length);
+        console.log('🎬 SponsorBlock segments:', segments.length);
         return { videoId, segments };
       }
     } catch (e) {}
@@ -228,7 +229,7 @@
     for (const segment of skipSegments.segments) {
       const [start, end] = segment.segment;
       if (currentTime > start && currentTime < end) {
-        console.log('🦦 Skipping sponsor segment:', segment.category);
+        console.log('🎬 Skipping sponsor segment:', segment.category);
         window.NouTube.seekTo(end);
         return;
       }
@@ -253,7 +254,7 @@
     if (lastProgress) {
       const time = parseFloat(lastProgress);
       if (time > 10 && time < duration - 30) {
-        console.log('🦦 Restoring progress:', time);
+        console.log('🎬 Restoring progress:', time);
         window.NouTube.seekTo(time);
       }
     }
@@ -280,7 +281,7 @@
   function handlePlayer(moviePlayer) {
     if (player === moviePlayer) return;
     player = moviePlayer;
-    console.log('🦦 Player detected');
+    console.log('🎬 Player detected');
 
     // Listen to state changes
     player.addEventListener('onStateChange', async (state) => {
@@ -293,7 +294,7 @@
       if (currentVideoId !== videoId) {
         currentVideoId = videoId;
         progressRestored = false;
-        console.log('🦦 Now playing:', title);
+        console.log('🎬 Now playing:', title);
 
         // Restore progress
         restoreVideoProgress(videoId, duration);
@@ -400,7 +401,8 @@
     const moviePlayer = document.getElementById('movie_player');
     if (moviePlayer) handlePlayer(moviePlayer);
 
-    console.log('🦦 NouTube Ad Blocker Active!');
+    console.log('🎬 MyTube Ad Blocker Active!');
+    console.log('   Created by MK Shaon');
     console.log('   - Ad blocking: ON');
     console.log('   - Shorts hidden:', window.NouTube.shortsHidden);
     console.log('   - SponsorBlock:', window.NouTube.sponsorBlock);

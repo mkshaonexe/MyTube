@@ -126,8 +126,11 @@
       .ytp-paid-content-overlay,
       .ytm-feed-ad-unit-renderer,
       .ytm-ad-slot-renderer,
-      /* Hide "Open App" button */
+      /* Hide "Open App" button - specific selectors only */
       .mobile-topbar-header-content a[href*="youtube.app.link"],
+      a[href*="youtube.app.link"],
+      a[href*="redirect_to_app"],
+      .ytm-open-app-pill-button-renderer,
       .ytm-autonav-toggle-button-renderer,
       /* Hide premium promos */
       ytm-mealbar-promo-renderer,
@@ -185,6 +188,60 @@
       if (dismissBtn) {
         dismissBtn.click();
       }
+      
+      // Modify YouTube header to MyTube - try multiple selectors
+      const selectors = [
+        'ytm-mobile-topbar-renderer .mobile-topbar-header-content ytm-logo a yt-formatted-string',
+        'ytm-mobile-topbar-renderer ytm-logo yt-formatted-string',
+        '.mobile-topbar-header-content .yt-core-attributed-string',
+        'ytm-logo-renderer yt-formatted-string',
+        'ytm-logo a span',
+        '.topbar-header-content span.yt-core-attributed-string',
+        'header a[href="/"] span'
+      ];
+      
+      for (const selector of selectors) {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (el && el.textContent && el.textContent.trim() === 'YouTube') {
+            el.textContent = 'MyTube';
+          }
+        });
+      }
+      
+      // Also try to find any element with YouTube text in the header
+      const headerArea = document.querySelector('ytm-mobile-topbar-renderer, .mobile-topbar-header');
+      if (headerArea) {
+        const allSpans = headerArea.querySelectorAll('span, yt-formatted-string');
+        allSpans.forEach(span => {
+          if (span.textContent && span.textContent.trim() === 'YouTube') {
+            span.textContent = 'MyTube';
+          }
+        });
+      }
+      
+      // Hide "Open App" button - specific selectors only
+      const openAppSelectors = [
+        'a[href*="youtube.app.link"]',
+        'a[href*="redirect_to_app"]',
+        '.ytm-open-app-pill-button-renderer'
+      ];
+      
+      for (const selector of openAppSelectors) {
+        const btns = document.querySelectorAll(selector);
+        btns.forEach(btn => {
+          if (btn) btn.style.display = 'none';
+        });
+      }
+      
+      // Find links/buttons with EXACTLY "Open App" text and hide them
+      const allLinks = document.querySelectorAll('a, button');
+      allLinks.forEach(link => {
+        const text = link.textContent ? link.textContent.trim() : '';
+        if (text === 'Open App' || text === 'Open app' || text === 'OPEN APP') {
+          link.style.display = 'none';
+        }
+      });
     });
     
     observer.observe(document.documentElement, {

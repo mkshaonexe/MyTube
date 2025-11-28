@@ -37,6 +37,11 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -50,8 +55,8 @@ public class MainActivity extends BridgeActivity {
     private static final int PERMISSION_REQUEST_CODE = 123;
     
     // App version - INCREMENT THIS when releasing new version
-    private static final int APP_VERSION_CODE = 0; // TESTING: Set to 0 to test update dialog
-    private static final String APP_VERSION_NAME = "0.0.1"; // TESTING
+    private static final int APP_VERSION_CODE = 1;
+    private static final String APP_VERSION_NAME = "1.0.0";
     
     // Supabase config
     private static final String SUPABASE_URL = "https://tosodvjvzifveabjqitb.supabase.co";
@@ -61,6 +66,8 @@ public class MainActivity extends BridgeActivity {
     private static final int FORCE_UPDATE_DAYS = 1;
     private static final String PREFS_NAME = "MyTubePrefs";
     private static final String PREF_UPDATE_FIRST_SEEN = "update_first_seen";
+    private static final String CHANNEL_ID = "mytube_updates";
+    private static final int UPDATE_NOTIFICATION_ID = 1001;
     
     private boolean isBlocked = false;
     private boolean youtubeLoaded = false;
@@ -310,22 +317,27 @@ public class MainActivity extends BridgeActivity {
                 long firstSeen = prefs.getLong(PREF_UPDATE_FIRST_SEEN, 0);
                 
                 if (firstSeen == 0) {
-                    // First time seeing this update
+                    // First time seeing this update - just show notification, let user continue
                     prefs.edit().putLong(PREF_UPDATE_FIRST_SEEN, System.currentTimeMillis()).apply();
-                    firstSeen = System.currentTimeMillis();
+                    Log.d(TAG, "First time seeing update - showing notification only");
+                    showUpdateNotification(latestVersionName, downloadUrl, releaseNotes);
+                    loadYouTube(); // Let user use the app
+                    return;
                 }
                 
                 // Calculate days since first seen
                 long daysSinceFirstSeen = (System.currentTimeMillis() - firstSeen) / (1000 * 60 * 60 * 24);
                 
-                // Force update if mandatory OR if grace period expired
+                // Force update if mandatory OR if grace period expired (1 day)
                 if (isMandatory || daysSinceFirstSeen >= FORCE_UPDATE_DAYS) {
                     Log.d(TAG, "Forcing update - mandatory: " + isMandatory + ", days: " + daysSinceFirstSeen);
                     showForceUpdateDialog(latestVersionName, downloadUrl, releaseNotes, true);
                 } else {
+                    // Still within grace period - show notification and let user continue
                     int daysRemaining = (int) (FORCE_UPDATE_DAYS - daysSinceFirstSeen);
-                    Log.d(TAG, "Showing optional update dialog, days remaining: " + daysRemaining);
-                    showUpdateDialog(latestVersionName, downloadUrl, releaseNotes, daysRemaining);
+                    Log.d(TAG, "Within grace period, days remaining: " + daysRemaining);
+                    showUpdateNotification(latestVersionName, downloadUrl, releaseNotes);
+                    loadYouTube(); // Let user use the app
                 }
             } else {
                 // No update needed, clear stored data and load YouTube
@@ -385,6 +397,55 @@ public class MainActivity extends BridgeActivity {
             startActivity(intent);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+    
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "MyTube Updates";
+            String description = "Notifications for app updates";
+            int importance = NotificationManager.IMPORTANCE_HIGH;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+    }
+    
+    private void showUpdateNotification(String version, String downloadUrl, String releaseNotes) {
+        createNotificationChannel();
+        
+        // Create intent to open download URL when notification is clicked
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl));
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("🔄 MyTube Update Available")
+            .setContentText("Version " + version + " is ready to install")
+            .setStyle(new NotificationCompat.BigTextStyle()
+                .bigText("Version " + version + " is available!\n" + releaseNotes + "\n\nTap to download and install."))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true);
+        
+        try {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                notificationManager.notify(UPDATE_NOTIFICATION_ID, builder.build());
+                Log.d(TAG, "Update notification shown");
+            } else {
+                Log.d(TAG, "No notification permission, showing toast instead");
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Update available: Version " + version, Toast.LENGTH_LONG).show();
+                });
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing notification", e);
         }
     }
     

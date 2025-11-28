@@ -32,10 +32,39 @@ import android.content.pm.PackageManager;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
+import android.os.AsyncTask;
+import android.util.Log;
+import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends BridgeActivity {
     
+    private static final String TAG = "MyTube";
     private static final int PERMISSION_REQUEST_CODE = 123;
+    
+    // App version - INCREMENT THIS when releasing new version
+    private static final int APP_VERSION_CODE = 0; // TESTING: Set to 0 to test update dialog
+    private static final String APP_VERSION_NAME = "0.0.1"; // TESTING
+    
+    // Supabase config
+    private static final String SUPABASE_URL = "https://tosodvjvzifveabjqitb.supabase.co";
+    private static final String SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvc29kdmp2emlmdmVhYmpxaXRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzI0NDUsImV4cCI6MjA3OTg0ODQ0NX0.Nos_xupW0n7LbEY_f1BHL7WaJu9-QWDdfARAQ1zhMGg";
+    
+    // Update settings
+    private static final int FORCE_UPDATE_DAYS = 1;
+    private static final String PREFS_NAME = "MyTubePrefs";
+    private static final String PREF_UPDATE_FIRST_SEEN = "update_first_seen";
+    
+    private boolean isBlocked = false;
+    private boolean youtubeLoaded = false;
+    private WebView webView;
 
     // Hosts to block (ads)
     private static final List<String> BLOCK_HOSTS = Arrays.asList(
@@ -69,12 +98,10 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        Log.d(TAG, "onCreate started - Version: " + APP_VERSION_CODE);
+        
         // Request notification permission for Android 13+
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_REQUEST_CODE);
-            }
-        }
+        requestNotificationPermission();
         
         // Setup status bar - NOT fullscreen, show status bar properly
         setupStatusBar();
@@ -87,7 +114,7 @@ public class MainActivity extends BridgeActivity {
             is.close();
             adBlockScript = new String(buffer);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error loading ad-block script", e);
         }
         
         // Enable cookies for YouTube login
@@ -96,7 +123,7 @@ public class MainActivity extends BridgeActivity {
         cookieManager.setAcceptThirdPartyCookies(getBridge().getWebView(), true);
         
         // Configure WebView for YouTube
-        WebView webView = getBridge().getWebView();
+        webView = getBridge().getWebView();
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -175,14 +202,198 @@ public class MainActivity extends BridgeActivity {
             }
         });
         
-        // Load YouTube
-        webView.loadUrl("https://m.youtube.com");
+        // Check for updates FIRST, then load YouTube
+        Log.d(TAG, "Starting update check...");
+        checkForUpdates();
+    }
+    
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Requesting notification permission");
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_REQUEST_CODE);
+            } else {
+                Log.d(TAG, "Notification permission already granted");
+            }
+        }
+    }
+    
+    private void loadYouTube() {
+        if (!youtubeLoaded && !isBlocked) {
+            youtubeLoaded = true;
+            Log.d(TAG, "Loading YouTube...");
+            runOnUiThread(() -> {
+                webView.loadUrl("https://m.youtube.com");
+            });
+        }
+    }
+    
+    private void checkForUpdates() {
+        new AsyncTask<Void, Void, JSONObject>() {
+            @Override
+            protected JSONObject doInBackground(Void... voids) {
+                try {
+                    String apiUrl = SUPABASE_URL + "/rest/v1/app_versions?select=*&order=version_code.desc&limit=1";
+                    Log.d(TAG, "Checking updates from: " + apiUrl);
+                    
+                    URL url = new URL(apiUrl);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+                    conn.setRequestProperty("Authorization", "Bearer " + SUPABASE_ANON_KEY);
+                    conn.setRequestProperty("Content-Type", "application/json");
+                    conn.setConnectTimeout(10000);
+                    conn.setReadTimeout(10000);
+                    
+                    int responseCode = conn.getResponseCode();
+                    Log.d(TAG, "Update check response code: " + responseCode);
+                    
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                        StringBuilder response = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            response.append(line);
+                        }
+                        reader.close();
+                        
+                        Log.d(TAG, "Update check response: " + response.toString());
+                        
+                        JSONArray jsonArray = new JSONArray(response.toString());
+                        if (jsonArray.length() > 0) {
+                            return jsonArray.getJSONObject(0);
+                        }
+                    } else {
+                        Log.e(TAG, "Update check failed with code: " + responseCode);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Update check error", e);
+                }
+                return null;
+            }
+            
+            @Override
+            protected void onPostExecute(JSONObject latestVersion) {
+                if (latestVersion != null) {
+                    Log.d(TAG, "Got latest version: " + latestVersion.toString());
+                    handleUpdateCheck(latestVersion);
+                } else {
+                    Log.d(TAG, "No update info found, loading YouTube");
+                    loadYouTube();
+                }
+            }
+        }.execute();
+    }
+    
+    private void handleUpdateCheck(JSONObject latestVersion) {
+        try {
+            int latestVersionCode = latestVersion.getInt("version_code");
+            String latestVersionName = latestVersion.getString("version_name");
+            String downloadUrl = latestVersion.getString("download_url");
+            String releaseNotes = latestVersion.optString("release_notes", "");
+            boolean isMandatory = latestVersion.optBoolean("is_mandatory", false);
+            int minSupportedVersion = latestVersion.optInt("min_supported_version", 1);
+            
+            Log.d(TAG, "Current version: " + APP_VERSION_CODE + ", Latest: " + latestVersionCode + ", Min: " + minSupportedVersion);
+            
+            // Check if current version is below minimum supported
+            if (APP_VERSION_CODE < minSupportedVersion) {
+                Log.d(TAG, "Version below minimum, forcing update");
+                showForceUpdateDialog(latestVersionName, downloadUrl, releaseNotes, true);
+                return;
+            }
+            
+            // Check if there's a newer version
+            if (latestVersionCode > APP_VERSION_CODE) {
+                Log.d(TAG, "Newer version available");
+                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                long firstSeen = prefs.getLong(PREF_UPDATE_FIRST_SEEN, 0);
+                
+                if (firstSeen == 0) {
+                    // First time seeing this update
+                    prefs.edit().putLong(PREF_UPDATE_FIRST_SEEN, System.currentTimeMillis()).apply();
+                    firstSeen = System.currentTimeMillis();
+                }
+                
+                // Calculate days since first seen
+                long daysSinceFirstSeen = (System.currentTimeMillis() - firstSeen) / (1000 * 60 * 60 * 24);
+                
+                // Force update if mandatory OR if grace period expired
+                if (isMandatory || daysSinceFirstSeen >= FORCE_UPDATE_DAYS) {
+                    Log.d(TAG, "Forcing update - mandatory: " + isMandatory + ", days: " + daysSinceFirstSeen);
+                    showForceUpdateDialog(latestVersionName, downloadUrl, releaseNotes, true);
+                } else {
+                    int daysRemaining = (int) (FORCE_UPDATE_DAYS - daysSinceFirstSeen);
+                    Log.d(TAG, "Showing optional update dialog, days remaining: " + daysRemaining);
+                    showUpdateDialog(latestVersionName, downloadUrl, releaseNotes, daysRemaining);
+                }
+            } else {
+                // No update needed, clear stored data and load YouTube
+                Log.d(TAG, "No update needed, loading YouTube");
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(PREF_UPDATE_FIRST_SEEN).apply();
+                loadYouTube();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling update check", e);
+            loadYouTube(); // Load YouTube on error
+        }
+    }
+    
+    private void showUpdateDialog(String version, String downloadUrl, String releaseNotes, int daysRemaining) {
+        runOnUiThread(() -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("🔄 Update Available");
+            builder.setMessage("Version " + version + " is available!\n\n" + 
+                              releaseNotes + "\n\n" +
+                              "⚠️ Update required in " + daysRemaining + " day(s)");
+            builder.setCancelable(false);
+            builder.setPositiveButton("Update Now", (dialog, which) -> {
+                openDownloadUrl(downloadUrl);
+                loadYouTube(); // Load YouTube after opening download
+            });
+            builder.setNegativeButton("Later", (dialog, which) -> {
+                dialog.dismiss();
+                loadYouTube(); // Load YouTube when user clicks Later
+            });
+            builder.show();
+        });
+    }
+    
+    private void showForceUpdateDialog(String version, String downloadUrl, String releaseNotes, boolean blocking) {
+        isBlocked = blocking;
+        runOnUiThread(() -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("⚠️ Update Required");
+            builder.setMessage("Version " + version + " is required to continue using MyTube.\n\n" + 
+                              releaseNotes + "\n\n" +
+                              "Please download and install the latest version.");
+            builder.setCancelable(false);
+            builder.setPositiveButton("Download Update", (dialog, which) -> {
+                openDownloadUrl(downloadUrl);
+                // Show dialog again after they come back
+                if (isBlocked) {
+                    showForceUpdateDialog(version, downloadUrl, releaseNotes, true);
+                }
+            });
+            builder.show();
+        });
+    }
+    
+    private void openDownloadUrl(String url) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     @Override
     public void onResume() {
         super.onResume();
         setupStatusBar();
+        // Request notification permission every time if not granted
+        requestNotificationPermission();
     }
 
     private void setupStatusBar() {

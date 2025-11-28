@@ -165,31 +165,53 @@ public class MainActivity extends BridgeActivity {
         webView.loadUrl("https://m.youtube.com");
     }
     
+    @Override
+    public void onResume() {
+        super.onResume();
+        setupStatusBar();
+    }
+
     private void setupStatusBar() {
         Window window = getWindow();
+        View decorView = window.getDecorView();
         
-        // Clear any fullscreen flags
+        // Force window background to be black
+        window.setBackgroundDrawableResource(android.R.color.black);
+        
+        // Clear any fullscreen and translucent flags
         window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        window.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         
         // IMPORTANT: Disable edge-to-edge / fit system windows properly
         WindowCompat.setDecorFitsSystemWindows(window, true);
         
-        // Set status bar color to black
+        // Force status bar to be visible and dark
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.setStatusBarColor(Color.BLACK);
+            window.setStatusBarColor(Color.BLACK); // Force solid black
+            window.setNavigationBarColor(Color.BLACK); // Force navigation bar black too
         }
         
-        // Make status bar icons light (white) for dark background
-        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, window.getDecorView());
+        // Make status bar icons light (white) for dark background - using both methods
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int flags = decorView.getSystemUiVisibility();
+            // Remove light status bar flag to make icons white
+            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            decorView.setSystemUiVisibility(flags);
+        }
+        
+        // Also use WindowInsetsController for newer Android versions
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, decorView);
         if (controller != null) {
-            controller.setAppearanceLightStatusBars(false); // false = white icons
+            controller.setAppearanceLightStatusBars(false); // false = white icons on dark background
+            controller.setAppearanceLightNavigationBars(false); // false = white buttons on dark background
         }
         
         // Apply window insets to WebView to push content below status bar
         View rootView = findViewById(android.R.id.content);
         if (rootView != null) {
+            rootView.setBackgroundColor(Color.BLACK); // Ensure root is black
             ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, windowInsets) -> {
                 Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
                 v.setPadding(insets.left, insets.top, insets.right, insets.bottom);

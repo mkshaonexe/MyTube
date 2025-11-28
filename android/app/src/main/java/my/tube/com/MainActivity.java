@@ -28,8 +28,15 @@ import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 import java.util.List;
 
+import android.content.pm.PackageManager;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.Manifest;
+
 public class MainActivity extends BridgeActivity {
     
+    private static final int PERMISSION_REQUEST_CODE = 123;
+
     // Hosts to block (ads)
     private static final List<String> BLOCK_HOSTS = Arrays.asList(
         "www.googletagmanager.com",
@@ -61,6 +68,13 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Request notification permission for Android 13+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, PERMISSION_REQUEST_CODE);
+            }
+        }
         
         // Setup status bar - NOT fullscreen, show status bar properly
         setupStatusBar();

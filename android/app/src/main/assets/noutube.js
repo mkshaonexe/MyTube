@@ -266,6 +266,28 @@
           logoContainer.appendChild(myTubeText);
         }
       }
+
+      // Fallback: inject directly into mobile topbar
+      if (!document.querySelector('.mytube-custom-text')) {
+        const topbar = document.querySelector('ytm-mobile-topbar-renderer, .mobile-topbar-header');
+        if (topbar) {
+          const myTubeText = document.createElement('div');
+          myTubeText.className = 'mytube-custom-text';
+          myTubeText.textContent = 'MyTube';
+          myTubeText.style.cssText = `
+            position: absolute !important;
+            left: 50px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            color: #fff !important;
+            font-size: 20px !important;
+            font-weight: 500 !important;
+            font-family: "YouTube Sans", "Roboto", Arial, sans-serif !important;
+            z-index: 9999 !important;
+          `;
+          topbar.appendChild(myTubeText);
+        }
+      }
     });
 
     observer.observe(document.documentElement, {

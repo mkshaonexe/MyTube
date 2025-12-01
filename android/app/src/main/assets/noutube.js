@@ -1,32 +1,32 @@
 // NouTube Ad-Blocking Script for MyTube
-(function() {
+(function () {
   'use strict';
-  
+
   // Keys to remove from player response (ads)
   const AD_KEYS = ['adBreakHeartbeatParams', 'adPlacements', 'adSlots', 'playerAds'];
-  
+
   // Transform player response to remove ads
   function transformPlayerResponse(text) {
     try {
       const data = JSON.parse(text);
       AD_KEYS.forEach(key => delete data[key]);
       return JSON.stringify(data);
-    } catch(e) {
+    } catch (e) {
       return text;
     }
   }
-  
+
   // Transform search response to remove shorts
   function transformSearchResponse(text) {
     try {
       const data = JSON.parse(text);
-      const sectionListRenderer = 
+      const sectionListRenderer =
         data.contents?.sectionListRenderer ||
         data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer;
       const itemSectionRenderer =
         sectionListRenderer?.contents?.[0]?.itemSectionRenderer ||
         data.onResponseReceivedCommands?.[0]?.appendContinuationItemsAction?.continuationItems?.[0]?.itemSectionRenderer;
-      
+
       if (itemSectionRenderer) {
         itemSectionRenderer.contents = itemSectionRenderer.contents.filter(item => {
           if (item.gridShelfViewModel) return false;
@@ -35,18 +35,18 @@
         });
       }
       return JSON.stringify(data);
-    } catch(e) {
+    } catch (e) {
       return text;
     }
   }
-  
+
   // Intercept fetch requests
   const originalFetch = window.fetch;
-  window.fetch = async function(...args) {
+  window.fetch = async function (...args) {
     const request = args[0];
     const url = request instanceof Request ? request.url : request.toString();
     let res = await originalFetch.apply(this, args);
-    
+
     try {
       const pathname = new URL(url).pathname;
       if (pathname.includes('/youtubei/v1/player')) {
@@ -63,29 +63,29 @@
           headers: res.headers
         });
       }
-    } catch(e) {
+    } catch (e) {
       console.error('MyTube fetch intercept error:', e);
     }
     return res;
   };
-  
+
   // Intercept XMLHttpRequest
   const originalXHROpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url) {
+  XMLHttpRequest.prototype.open = function (method, url) {
     const urlStr = url.toString();
-    this.addEventListener('readystatechange', function() {
+    this.addEventListener('readystatechange', function () {
       if (urlStr.includes('youtubei/v1/player') && this.readyState === 4) {
         try {
           const text = transformPlayerResponse(this.responseText);
           Object.defineProperty(this, 'response', { writable: true });
           Object.defineProperty(this, 'responseText', { writable: true });
           this.response = this.responseText = text;
-        } catch(e) {}
+        } catch (e) { }
       }
     });
     return originalXHROpen.apply(this, arguments);
   };
-  
+
   // Inject CSS to hide ads and shorts
   function injectCSS() {
     const style = document.createElement('style');
@@ -120,27 +120,19 @@
       ytm-statement-banner-renderer,
       .ytm-promoted-sparkles-web-renderer,
       a.app-install-link,
-      a.yt-spec-button-shape-next[href*="premium"],
-      ytm-pivot-bar-renderer[data-layer="top"],
-      .ytm-pivot-bar-item-renderer[tab-id="FEmenu"],
-      .ytp-paid-content-overlay,
-      .ytm-feed-ad-unit-renderer,
-      .ytm-ad-slot-renderer,
-      /* Hide "Open App" button - specific selectors only */
+      .ytGridShelfViewModelHost,
+      /* Hide quick action buttons */
+      .quick-actions-wrapper.enable-rtl-mirroring,
+      /* Hide "Open App" button */
       .mobile-topbar-header-content a[href*="youtube.app.link"],
       a[href*="youtube.app.link"],
       a[href*="redirect_to_app"],
       .ytm-open-app-pill-button-renderer,
       .ytm-autonav-toggle-button-renderer,
-      /* Hide premium promos */
-      ytm-mealbar-promo-renderer,
-      ytm-statement-banner-renderer,
-      /* Hide shorts on home */
-      ytm-reel-shelf-renderer,
-      ytd-rich-section-renderer,
-      .ytGridShelfViewModelHost,
-      /* Hide quick action buttons */
-      .quick-actions-wrapper.enable-rtl-mirroring {
+      /* Hide YouTube logo text SVG */
+      g#youtube-paths_yt10,
+      g[id*="youtube-paths"],
+      #logo-icon g[id*="youtube"] {
         display: none !important;
       }
       
@@ -152,7 +144,7 @@
         display: block !important;
       }
     `;
-    
+
     if (document.head) {
       document.head.appendChild(style);
     } else {
@@ -161,7 +153,7 @@
       });
     }
   }
-  
+
   // Auto-skip ads if they somehow appear
   function setupAdSkipper() {
     const observer = new MutationObserver(() => {
@@ -170,25 +162,25 @@
       if (skipBtn) {
         skipBtn.click();
       }
-      
+
       // Skip overlay ads
       const closeBtn = document.querySelector('.ytp-ad-overlay-close-button');
       if (closeBtn) {
         closeBtn.click();
       }
-      
+
       // If video is ad, try to skip
       const adVideo = document.querySelector('.ad-showing video');
       if (adVideo) {
         adVideo.currentTime = adVideo.duration || 9999;
       }
-      
+
       // Dismiss promo dialogs
       const dismissBtn = document.querySelector('ytmusic-mealbar-promo-renderer .dismiss-button, .yt-mealbar-promo-renderer__dismiss-button');
       if (dismissBtn) {
         dismissBtn.click();
       }
-      
+
       // Modify YouTube header to MyTube - try multiple selectors
       const selectors = [
         'ytm-mobile-topbar-renderer .mobile-topbar-header-content ytm-logo a yt-formatted-string',
@@ -199,7 +191,7 @@
         '.topbar-header-content span.yt-core-attributed-string',
         'header a[href="/"] span'
       ];
-      
+
       for (const selector of selectors) {
         const elements = document.querySelectorAll(selector);
         elements.forEach(el => {
@@ -208,7 +200,7 @@
           }
         });
       }
-      
+
       // Also try to find any element with YouTube text in the header
       const headerArea = document.querySelector('ytm-mobile-topbar-renderer, .mobile-topbar-header');
       if (headerArea) {
@@ -219,21 +211,21 @@
           }
         });
       }
-      
+
       // Hide "Open App" button - specific selectors only
       const openAppSelectors = [
         'a[href*="youtube.app.link"]',
         'a[href*="redirect_to_app"]',
         '.ytm-open-app-pill-button-renderer'
       ];
-      
+
       for (const selector of openAppSelectors) {
         const btns = document.querySelectorAll(selector);
         btns.forEach(btn => {
           if (btn) btn.style.display = 'none';
         });
       }
-      
+
       // Find links/buttons with EXACTLY "Open App" text and hide them
       const allLinks = document.querySelectorAll('a, button');
       allLinks.forEach(link => {
@@ -242,27 +234,33 @@
           link.style.display = 'none';
         }
       });
+
+      // Hide YouTube logo text SVG elements
+      const youtubeLogoSVGs = document.querySelectorAll('g#youtube-paths_yt10, g[id*="youtube-paths"], #logo-icon g[id*="youtube"]');
+      youtubeLogoSVGs.forEach(svg => {
+        if (svg) svg.style.display = 'none';
+      });
     });
-    
+
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true
     });
   }
-  
+
   // Prevent "Are you still watching?" popup
   setInterval(() => {
     window._lact = Date.now();
   }, 60 * 1000);
-  
+
   // Initialize
   injectCSS();
-  
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupAdSkipper);
   } else {
     setupAdSkipper();
   }
-  
+
   console.log('🦦 MyTube Ad-Blocker Loaded!');
 })();

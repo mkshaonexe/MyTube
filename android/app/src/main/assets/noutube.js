@@ -235,11 +235,37 @@
         }
       });
 
-      // Hide YouTube logo text SVG elements
+      // Hide YouTube logo text SVG elements and inject "MyTube" text
       const youtubeLogoSVGs = document.querySelectorAll('g#youtube-paths_yt10, g[id*="youtube-paths"], #logo-icon g[id*="youtube"]');
       youtubeLogoSVGs.forEach(svg => {
         if (svg) svg.style.display = 'none';
       });
+
+      // Inject "MyTube" text in the header
+      const logoContainer = document.querySelector('ytm-logo, ytm-logo-renderer, #logo-icon, .mobile-topbar-header-content ytm-logo');
+      if (logoContainer && !logoContainer.querySelector('.mytube-custom-text')) {
+        // Create MyTube text element
+        const myTubeText = document.createElement('span');
+        myTubeText.className = 'mytube-custom-text';
+        myTubeText.textContent = 'MyTube';
+        myTubeText.style.cssText = `
+          color: white;
+          font-size: 18px;
+          font-weight: 500;
+          font-family: "YouTube Sans", "Roboto", sans-serif;
+          margin-left: 8px;
+          display: inline-block;
+          vertical-align: middle;
+        `;
+
+        // Insert the text next to the logo icon
+        const logoLink = logoContainer.querySelector('a');
+        if (logoLink) {
+          logoLink.appendChild(myTubeText);
+        } else {
+          logoContainer.appendChild(myTubeText);
+        }
+      }
     });
 
     observer.observe(document.documentElement, {

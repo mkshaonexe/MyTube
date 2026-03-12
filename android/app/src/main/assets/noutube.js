@@ -188,6 +188,81 @@
         background: white !important;
         border-bottom: none !important;
       }
+
+      /* Custom Minimalist Home UI */
+      #mytube-minimalist-home {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: white;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 20vh;
+        box-sizing: border-box;
+      }
+
+      .mytube-home-logo {
+        width: 120px;
+        height: 80px;
+        margin-bottom: 24px;
+        color: #FF0000;
+      }
+
+      .mytube-search-container {
+        width: 90%;
+        max-width: 500px;
+        display: flex;
+        align-items: center;
+        background: #f1f1f1;
+        border-radius: 40px;
+        padding: 10px 20px;
+        margin-bottom: 40px;
+        cursor: text;
+      }
+
+      .mytube-search-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 12px;
+        opacity: 0.6;
+      }
+
+      .mytube-search-placeholder {
+        flex: 1;
+        color: #606060;
+        font-size: 16px;
+        font-family: Roboto, Arial, sans-serif;
+      }
+
+      .mytube-home-card {
+        width: 90%;
+        max-width: 400px;
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        text-align: center;
+        border: 1px solid #e5e5e5;
+      }
+
+      .mytube-card-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #0f0f0f;
+        font-family: Roboto, Arial, sans-serif;
+      }
+
+      .mytube-card-text {
+        font-size: 14px;
+        color: #606060;
+        line-height: 1.5;
+        font-family: Roboto, Arial, sans-serif;
+      }
     `;
 
     if (document.head) {
@@ -340,6 +415,42 @@
       subtree: true
     });
 
+    // Inject custom minimalist home UI
+    function injectMinimalistHome() {
+      if (document.getElementById('mytube-minimalist-home')) return;
+
+      const container = document.createElement('div');
+      container.id = 'mytube-minimalist-home';
+      container.innerHTML = `
+        <div class="mytube-home-logo">
+          <svg viewBox="0 0 200 60" preserveAspectRatio="xMidYMid meet">
+            <g viewBox="0 0 200 60" preserveAspectRatio="xMidYMid meet" class="style-scope ytd-logo">
+              <g class="style-scope ytd-logo">
+                <path fill="#FF0000" d="M63,14.87c-0.72-2.7-2.85-4.83-5.56-5.56C52.54,8,32.88,8,32.88,8S13.23,8,8.32,9.31c-2.7,0.72-4.83,2.85-5.56,5.56 C1.45,19.77,1.45,30,1.45,30s0,10.23,1.31,15.13c0.72,2.7,2.85,4.83,5.56,5.56C13.23,52,32.88,52,32.88,52s19.67,0,24.56-1.31 c2.7-0.72,4.83-2.85,5.56-5.56C64.31,40.23,64.31,30,64.31,30S64.31,19.77,63,14.87z" class="style-scope ytd-logo"></path>
+                <polygon fill="#FFFFFF" points="26.6,39.43 42.93,30 26.6,20.57" class="style-scope ytd-logo"></polygon>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="mytube-search-container" onclick="document.querySelector('button.header-search-icon, .header-search-icon').click()">
+          <svg class="mytube-search-icon" viewBox="0 0 24 24">
+            <path fill="#606060" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+          </svg>
+          <div class="mytube-search-placeholder">Search YouTube</div>
+        </div>
+        <div class="mytube-home-card">
+          <div class="mytube-card-title">Try searching to get started</div>
+          <div class="mytube-card-text">Start watching videos to help us build a feed of videos you'll love.</div>
+        </div>
+      `;
+      document.body.appendChild(container);
+    }
+
+    function removeMinimalistHome() {
+      const el = document.getElementById('mytube-minimalist-home');
+      if (el) el.remove();
+    }
+
     // Toggle watch and home mode class based on URL
     const updateWatchMode = () => {
       const path = window.location.pathname;
@@ -350,11 +461,13 @@
           document.body.classList.add('mytube-home-mode');
           console.log('🦦 Home mode activated');
         }
+        injectMinimalistHome();
       } else {
         if (document.body.classList.contains('mytube-home-mode')) {
           document.body.classList.remove('mytube-home-mode');
           console.log('🦦 Home mode deactivated');
         }
+        removeMinimalistHome();
       }
 
       // Watch mode detection

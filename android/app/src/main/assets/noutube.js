@@ -193,6 +193,14 @@
         border-bottom: none !important;
       }
 
+      /* Hide custom text during search to avoid overlap */
+      body.show-search .mytube-custom-text,
+      body[search-active] .mytube-custom-text,
+      .searching .mytube-custom-text,
+      ytm-search-focus .mytube-custom-text {
+        display: none !important;
+      }
+
       /* Custom Minimalist Home UI */
       #mytube-minimalist-home {
         position: fixed;

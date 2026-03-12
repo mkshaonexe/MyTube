@@ -144,13 +144,19 @@
         display: block !important;
       }
       
-      /* Watch Mode - Hide comments, related videos, and other distractions */
-      body.mytube-watch-mode ytm-item-section-renderer[section-identifier="related-videos"],
+      /* Watch Mode - Hide everything below the player */
+      body.mytube-watch-mode ytm-item-section-renderer,
       body.mytube-watch-mode ytm-comment-section-renderer,
       body.mytube-watch-mode ytm-media-item-metadata-renderer,
       body.mytube-watch-mode ytm-video-description-header-renderer,
       body.mytube-watch-mode .ytm-promoted-sparkles-web-renderer,
-      body.mytube-watch-mode ytm-rich-section-renderer {
+      body.mytube-watch-mode ytm-rich-section-renderer,
+      body.mytube-watch-mode .watch-below-the-player,
+      body.mytube-watch-mode ytm-pivot-bar-renderer,
+      body.mytube-watch-mode ytm-slim-video-metadata-section-renderer,
+      body.mytube-watch-mode ytm-engagement-panel-section-list-renderer,
+      body.mytube-watch-mode ytm-content-metadata-section-renderer,
+      body.mytube-watch-mode .ytm-ads-details-announcement-renderer {
         display: none !important;
       }
       
@@ -159,6 +165,11 @@
         position: relative !important;
         z-index: 10 !important;
         background: black !important;
+      }
+      
+      /* Hide the gap below the player */
+      body.mytube-watch-mode #results {
+        display: none !important;
       }
     `;
 

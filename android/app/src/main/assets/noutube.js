@@ -197,7 +197,10 @@
       body.show-search .mytube-custom-text,
       body[search-active] .mytube-custom-text,
       .searching .mytube-custom-text,
-      ytm-search-focus .mytube-custom-text {
+      ytm-search-focus .mytube-custom-text,
+      .search-active .mytube-custom-text,
+      #search-container .mytube-custom-text,
+      .header-search-field:focus ~ .mytube-custom-text {
         display: none !important;
       }
 
@@ -416,10 +419,25 @@
             font-weight: 500 !important;
             font-family: "YouTube Sans", "Roboto", Arial, sans-serif !important;
             z-index: 9999 !important;
+            pointer-events: none !important; /* Don't interfere with clicks */
           `;
           topbar.appendChild(myTubeText);
         }
       }
+
+      // Explicitly hide mytube-custom-text if search input is visible/focused
+      const customText = document.querySelectorAll('.mytube-custom-text');
+      const searchBox = document.querySelector('ytm-search-box-renderer, .header-search-field, #search-input');
+      const isSearching = searchBox && (searchBox.offsetParent !== null || document.activeElement === searchBox);
+      
+      customText.forEach(el => {
+        if (isSearching || document.body.classList.contains('show-search')) {
+          el.style.setProperty('display', 'none', 'important');
+        } else {
+          // Only show if NOT in search mode (CSS will still hide it if needed)
+          el.style.removeProperty('display');
+        }
+      });
     });
 
     observer.observe(document.documentElement, {

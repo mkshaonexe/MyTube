@@ -171,6 +171,23 @@
       body.mytube-watch-mode #results {
         display: none !important;
       }
+
+      /* Home Mode - Minimalist feed */
+      body.mytube-home-mode ytm-rich-grid-renderer,
+      body.mytube-home-mode .ytm-feed-filter-bar-renderer,
+      body.mytube-home-mode ytm-media-item-metadata-renderer,
+      body.mytube-home-mode .ytm-promoted-sparkles-web-renderer {
+        display: none !important;
+      }
+      
+      body.mytube-home-mode {
+        background: white !important;
+      }
+
+      body.mytube-home-mode ytm-mobile-topbar-renderer {
+        background: white !important;
+        border-bottom: none !important;
+      }
     `;
 
     if (document.head) {
@@ -323,9 +340,25 @@
       subtree: true
     });
 
-    // Toggle watch mode class based on URL
+    // Toggle watch and home mode class based on URL
     const updateWatchMode = () => {
-      if (window.location.pathname.startsWith('/watch')) {
+      const path = window.location.pathname;
+      
+      // Home mode detection
+      if (path === '/' || path === '/index.html') {
+        if (!document.body.classList.contains('mytube-home-mode')) {
+          document.body.classList.add('mytube-home-mode');
+          console.log('🦦 Home mode activated');
+        }
+      } else {
+        if (document.body.classList.contains('mytube-home-mode')) {
+          document.body.classList.remove('mytube-home-mode');
+          console.log('🦦 Home mode deactivated');
+        }
+      }
+
+      // Watch mode detection
+      if (path.startsWith('/watch')) {
         if (!document.body.classList.contains('mytube-watch-mode')) {
           document.body.classList.add('mytube-watch-mode');
           console.log('🦦 Watch mode activated');

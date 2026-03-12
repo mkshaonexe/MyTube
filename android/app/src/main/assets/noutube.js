@@ -143,6 +143,23 @@
       .ad-showing .html5-video-container {
         display: block !important;
       }
+      
+      /* Watch Mode - Hide comments, related videos, and other distractions */
+      body.mytube-watch-mode ytm-item-section-renderer[section-identifier="related-videos"],
+      body.mytube-watch-mode ytm-comment-section-renderer,
+      body.mytube-watch-mode ytm-media-item-metadata-renderer,
+      body.mytube-watch-mode ytm-video-description-header-renderer,
+      body.mytube-watch-mode .ytm-promoted-sparkles-web-renderer,
+      body.mytube-watch-mode ytm-rich-section-renderer {
+        display: none !important;
+      }
+      
+      /* Ensure player stays at top and fills width */
+      body.mytube-watch-mode #player-container-id {
+        position: relative !important;
+        z-index: 10 !important;
+        background: black !important;
+      }
     `;
 
     if (document.head) {
@@ -294,6 +311,56 @@
       childList: true,
       subtree: true
     });
+
+    // Toggle watch mode class based on URL
+    const updateWatchMode = () => {
+      if (window.location.pathname.startsWith('/watch')) {
+        if (!document.body.classList.contains('mytube-watch-mode')) {
+          document.body.classList.add('mytube-watch-mode');
+          console.log('🦦 Watch mode activated');
+        }
+      } else {
+        if (document.body.classList.contains('mytube-watch-mode')) {
+          document.body.classList.remove('mytube-watch-mode');
+          console.log('🦦 Watch mode deactivated');
+        }
+      }
+    };
+
+    // Initial check
+    updateWatchMode();
+
+    // Watch for URL changes via history API
+    const originalPushState = history.pushState;
+    history.pushState = function() {
+      originalPushState.apply(this, arguments);
+      updateWatchMode();
+    };
+    
+    const originalReplaceState = history.replaceState;
+    history.replaceState = function() {
+      originalReplaceState.apply(this, arguments);
+      updateWatchMode();
+    };
+
+    window.addEventListener('popstate', updateWatchMode);
+    
+    // Also check on mutation since YouTube uses soft navigation
+    let lastUrl = window.location.href;
+    const urlObserver = new MutationObserver(() => {
+      if (window.location.href !== lastUrl) {
+        lastUrl = window.location.href;
+        updateWatchMode();
+      }
+    });
+
+    const titleEl = document.querySelector('title');
+    if (titleEl) {
+      urlObserver.observe(titleEl, {
+        childList: true,
+        subtree: true
+      });
+    }
   }
 
   // Prevent "Are you still watching?" popup

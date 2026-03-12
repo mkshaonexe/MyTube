@@ -132,7 +132,11 @@
       /* Hide YouTube logo text SVG */
       g#youtube-paths_yt10,
       g[id*="youtube-paths"],
-      #logo-icon g[id*="youtube"] {
+      #logo-icon g[id*="youtube"],
+      /* Hide Shorts from pivot bar */
+      ytm-pivot-bar-item-renderer:nth-child(2),
+      ytm-pivot-bar-item-renderer[tab-identifier="FEshorts"],
+      a[href="/shorts"] {
         display: none !important;
       }
       
